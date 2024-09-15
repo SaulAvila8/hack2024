@@ -9,14 +9,14 @@ import numpy as np
 page_bg = """
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://bitfinance.news/wp-content/uploads/2021/06/Creado-fondo-por-1.000-millones-de-dolares-para-producir-energia-limpia-1.jpg"); /* URL de la imagen de fondo */
+    background-image: url("https://bitfinance.news/wp-content/uploads/2021/06/Creado-fondo-por-1.000-millones-de-dolares-para-producir-energia-limpia-1.jpg");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 }
 
 [data-testid="stHeader"] {
-    background-color: rgba(0, 0, 0, 0); /* Hace el fondo del encabezado transparente */
+    background-color: rgba(0, 0, 0, 0);
 }
 
 [data-testid="stSidebar"] {
@@ -24,7 +24,7 @@ page_bg = """
 }
 
 .main {
-    background-color: rgba(255, 255, 255, 0.8); /* Fondo blanco con 80% de transparencia */
+    background-color: rgba(255, 255, 255, 0.8);
     border-radius: 15px;
     padding: 20px;
     margin-top: 20px;
@@ -124,7 +124,7 @@ def simular_energia_renovable(tipo_energia, lat, lon, tamano_techo):
     eng.quit()
     return energia_generada
 
-#Gráfica costo beneficio
+# Función para graficar el costo-beneficio
 def graficar_costo_beneficio(energia_generada, tamano_techo):
     costo_por_m2 = 100  
     costo_inversion = tamano_techo * costo_por_m2
@@ -190,21 +190,20 @@ def graficar_costo_beneficio(energia_generada, tamano_techo):
         - **No se recuperará la inversión inicial en 10 años**.
         """)
 
-
 # Función para obtener recomendaciones basadas en IA usando Google Gemini 1.5 API
 def obtener_recomendacion_ia(datos_usuario):
     api_key = "AIzaSyB06TQV7ufEzGHrFHnxQdt-MRQCXR2PIt8"  # API Key proporcionada
 
-    if datos_usuario['tipo_energia'] == "Solar" :
+    if datos_usuario['tipo_energia'] == "Solar":
         prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
-              f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
-              f"La radiación solar diaria es {datos_usuario['radiacion_solar_diaria']} "
-              f"¿Qué tipo de paneles me recomiendas?, se muy breve y ve directo al grano")
+                  f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
+                  f"La radiación solar diaria es {datos_usuario['radiacion_solar_diaria']} "
+                  f"¿Qué tipo de paneles me recomiendas?, se muy breve y ve directo al grano")
     elif datos_usuario['tipo_energia'] == "Eólica":
         prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
-              f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
-              f"y la velocidad del viento es {datos_usuario.get('velocidad_viento', 'desconocida')}. "
-              f"¿Qué tipo de generadores eólicos me recomiendas?,  se muy breve y ve directo al grano")
+                  f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
+                  f"y la velocidad del viento es {datos_usuario.get('velocidad_viento', 'desconocida')}. "
+                  f"¿Qué tipo de generadores eólicos me recomiendas?,  se muy breve y ve directo al grano")
 
     # Endpoint para Google Gemini 1.5 API
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
@@ -237,8 +236,19 @@ def obtener_recomendacion_ia(datos_usuario):
     else:
         return f"Error: {response.status_code} - {response.text}"
 
-
-
+# Función para calcular reducción de CO2 usando MATLAB
+def calcular_reduccion_co2(tipo_energia, energia_generada):
+    # Iniciar MATLAB
+    eng = matlab.engine.start_matlab()
+    eng.cd('C:/Users/saula/OneDrive/Imágenes/Escritorio/proyecto_hack/matlab', nargout=0)
+    
+    if tipo_energia == "Solar":
+        reduccion_co2 = eng.calcular_reduccion_co2_solar(float(energia_generada))
+    elif tipo_energia == "Eólica":
+        reduccion_co2 = eng.calcular_reduccion_co2_eolica(float(energia_generada))
+    
+    eng.quit()
+    return reduccion_co2
 
 # Interfaz de usuario
 st.subheader("🔍 Ingresar datos")
@@ -248,7 +258,7 @@ with col1:
     ciudad = st.text_input("🏙️ Ingrese su ciudad:", "")
     pais_seleccionado = st.selectbox("🌎 Seleccione su país:", list(lista_paises.keys()))
     codigo_pais = lista_paises[pais_seleccionado]
-    tamano_techo = st.number_input('🏠 Tamaño del techo en m²:', min_value=1.0, step=1.0)  # Cambiar a number_input
+    tamano_techo = st.number_input('🏠 Tamaño del techo en m²:', min_value=0.0, step=1.0)
     tipo_energia = st.selectbox("🔋 Seleccione el tipo de energía renovable", ("Solar", "Eólica"))
     consumo_actual = st.number_input("💡 Consumo energético actual (kWh por mes):", min_value=0.0)
 
@@ -263,7 +273,7 @@ with col2:
 st.markdown("***")
 
 # Clave API de OpenWeatherMap
-api_key_openweather = '8238cebededd8aa41300614e00ea4dec'  # Aquí se incluye la clave de OpenWeatherMap
+api_key_openweather = '8238cebededd8aa41300614e00ea4dec'
 
 # Captura de datos del usuario para chatbot
 if st.button("💬 Obtener recomendación de IA"):
@@ -301,3 +311,7 @@ if st.button("⚡ Calcular potencial de energía renovable ⚡"):
             
             # Graficar el costo-beneficio
             graficar_costo_beneficio(energia_generada, tamano_techo)
+            
+            # Calcular y mostrar la reducción de CO2
+            reduccion_co2 = calcular_reduccion_co2(tipo_energia, energia_generada)
+            st.write(f"🌿 **Reducción de CO2 estimada:** {reduccion_co2} kilogramos")
