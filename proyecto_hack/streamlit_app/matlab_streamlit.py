@@ -5,15 +5,18 @@ import requests
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Inyectar CSS personalizado para cambiar el fondo y otros estilos
+# Inyectar CSS personalizado para cambiar el fondo y otros estilos, incluyendo la imagen de fondo
 page_bg = """
 <style>
 [data-testid="stAppViewContainer"] {
-    background-color: #f0f4f7;
+    background-image: url("https://bitfinance.news/wp-content/uploads/2021/06/Creado-fondo-por-1.000-millones-de-dolares-para-producir-energia-limpia-1.jpg"); /* URL de la imagen de fondo */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 [data-testid="stHeader"] {
-    background-color: rgba(0, 0, 0, 0);
+    background-color: rgba(0, 0, 0, 0); /* Hace el fondo del encabezado transparente */
 }
 
 [data-testid="stSidebar"] {
@@ -21,7 +24,7 @@ page_bg = """
 }
 
 .main {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.8); /* Fondo blanco con 80% de transparencia */
     border-radius: 15px;
     padding: 20px;
     margin-top: 20px;
@@ -121,7 +124,7 @@ def simular_energia_renovable(tipo_energia, lat, lon, tamano_techo):
     eng.quit()
     return energia_generada
 
-# Función para graficar el costo-beneficio con validación
+#Gráfica costo beneficio
 def graficar_costo_beneficio(energia_generada, tamano_techo):
     costo_por_m2 = 100  
     costo_inversion = tamano_techo * costo_por_m2
@@ -129,7 +132,7 @@ def graficar_costo_beneficio(energia_generada, tamano_techo):
     ahorro_por_kwh = 2  
     ahorro_mensual = energia_generada * ahorro_por_kwh
     
-    meses = np.arange(1, 121)  
+    meses = np.arange(1, 121)  # 10 años (120 meses)
     inversion_acumulada = np.full(meses.shape, costo_inversion)
     ahorro_acumulado = ahorro_mensual * meses
 
@@ -138,33 +141,104 @@ def graficar_costo_beneficio(energia_generada, tamano_techo):
     else:
         mes_recuperacion = np.argmax(ahorro_acumulado >= costo_inversion) + 1
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(meses, inversion_acumulada, label="Costo de Inversión", color="red", linestyle="--", linewidth=2)
-    plt.plot(meses, ahorro_acumulado, label="Ahorro Acumulado", color="green", linestyle="-", linewidth=2)
+    # Mejorar el estilo de la gráfica
+    plt.figure(figsize=(10, 6))
+    plt.plot(meses, inversion_acumulada, label="Costo de Inversión", color="#FF5733", linestyle="--", linewidth=2, alpha=0.8)
+    plt.plot(meses, ahorro_acumulado, label="Ahorro Acumulado", color="#28B463", linestyle="-", linewidth=3, alpha=0.9)
+    
+    # Añadir sombreado a las líneas
+    plt.fill_between(meses, inversion_acumulada, color="#FF5733", alpha=0.1)
+    plt.fill_between(meses, ahorro_acumulado, color="#28B463", alpha=0.1)
+
+    # Añadir una línea horizontal en y=0
     plt.axhline(0, color="black", linewidth=0.5)
     
-    plt.xlabel("Meses", fontsize=12)
-    plt.ylabel("Dinero (USD)", fontsize=12)
-    plt.title("Gráfica de Costo-Beneficio", fontsize=14, fontweight="bold")
-    plt.legend(loc="best", fontsize=10)
-    plt.grid(True)
+    # Personalizar el diseño
+    plt.xlabel("Meses", fontsize=14, fontweight="bold")
+    plt.ylabel("Dinero (USD)", fontsize=14, fontweight="bold")
+    plt.title("Gráfica de Costo-Beneficio - Inversión vs Ahorro", fontsize=16, fontweight="bold", color="#1F618D")
+
+    # Mejorar las etiquetas de los ejes
+    plt.xticks(fontsize=12, color="#34495E")
+    plt.yticks(fontsize=12, color="#34495E")
+
+    # Mostrar leyenda y agregar grid más suave
+    plt.legend(loc="best", fontsize=12)
+    plt.grid(True, linestyle="--", alpha=0.7)
+    
+    # Destacar el mes de recuperación de la inversión
+    if mes_recuperacion:
+        plt.axvline(x=mes_recuperacion, color="#FFC300", linestyle="--", linewidth=2)
+        plt.text(mes_recuperacion, costo_inversion, f'Recuperación en el mes {mes_recuperacion}', color="#FFC300", fontsize=12, fontweight="bold")
+
     plt.tight_layout()
     st.pyplot(plt)
 
+    # Explicación de la gráfica
     if mes_recuperacion:
         st.write(f"""
         **Explicación de la Gráfica**:
-        - La línea roja representa el costo de la inversión inicial, que es de ${costo_inversion:.2f} USD.
-        - La línea verde representa el ahorro acumulado mes a mes en tu factura de electricidad.
-        - En el mes {mes_recuperacion}, habrás recuperado tu inversión inicial.
+        - La línea **roja** representa el costo de la inversión inicial, que es de ${costo_inversion:.2f} USD.
+        - La línea **verde** representa el ahorro acumulado mes a mes en tu factura de electricidad.
+        - En el mes **{mes_recuperacion}**, habrás recuperado tu inversión inicial.
         """)
     else:
         st.write(f"""
         **Explicación de la Gráfica**:
-        - La línea roja representa el costo de la inversión inicial, que es de ${costo_inversion:.2f} USD.
-        - La línea verde representa el ahorro acumulado mes a mes.
-        - No se recuperará la inversión inicial en 10 años.
+        - La línea **roja** representa el costo de la inversión inicial, que es de ${costo_inversion:.2f} USD.
+        - La línea **verde** representa el ahorro acumulado mes a mes.
+        - **No se recuperará la inversión inicial en 10 años**.
         """)
+
+
+# Función para obtener recomendaciones basadas en IA usando Google Gemini 1.5 API
+def obtener_recomendacion_ia(datos_usuario):
+    api_key = "AIzaSyB06TQV7ufEzGHrFHnxQdt-MRQCXR2PIt8"  # API Key proporcionada
+
+    if datos_usuario['tipo_energia'] == "Solar" :
+        prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
+              f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
+              f"La radiación solar diaria es {datos_usuario['radiacion_solar_diaria']} "
+              f"¿Qué tipo de paneles me recomiendas?, se muy breve y ve directo al grano")
+    elif datos_usuario['tipo_energia'] == "Eólica":
+        prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
+              f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
+              f"y la velocidad del viento es {datos_usuario.get('velocidad_viento', 'desconocida')}. "
+              f"¿Qué tipo de generadores eólicos me recomiendas?,  se muy breve y ve directo al grano")
+
+    # Endpoint para Google Gemini 1.5 API
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+
+    # Realizar la solicitud POST a la API
+    headers = {
+        "Content-Type": "application/json"
+    }
+    body = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
+    response = requests.post(url, json=body, headers=headers)
+
+    # Verificar si la solicitud fue exitosa
+    if response.status_code == 200:
+        data = response.json()
+
+        # Intentar acceder a los datos de la respuesta en 'parts'
+        try:
+            return data['candidates'][0]['content']['parts'][0]['text']
+        except KeyError as e:
+            return f"Error: clave {e} no encontrada en la respuesta."
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+
+
+
 
 # Interfaz de usuario
 st.subheader("🔍 Ingresar datos")
@@ -174,7 +248,7 @@ with col1:
     ciudad = st.text_input("🏙️ Ingrese su ciudad:", "")
     pais_seleccionado = st.selectbox("🌎 Seleccione su país:", list(lista_paises.keys()))
     codigo_pais = lista_paises[pais_seleccionado]
-    tamano_techo = st.number_input("🏠 Tamaño del techo (en metros cuadrados):", min_value=0.0)
+    tamano_techo = st.number_input('🏠 Tamaño del techo en m²:', min_value=1.0, step=1.0)  # Cambiar a number_input
     tipo_energia = st.selectbox("🔋 Seleccione el tipo de energía renovable", ("Solar", "Eólica"))
     consumo_actual = st.number_input("💡 Consumo energético actual (kWh por mes):", min_value=0.0)
 
@@ -189,7 +263,29 @@ with col2:
 st.markdown("***")
 
 # Clave API de OpenWeatherMap
-api_key_openweather = '8238cebededd8aa41300614e00ea4dec'
+api_key_openweather = '8238cebededd8aa41300614e00ea4dec'  # Aquí se incluye la clave de OpenWeatherMap
+
+# Captura de datos del usuario para chatbot
+if st.button("💬 Obtener recomendación de IA"):
+    lat, lon = obtener_lat_lon_openweather_ciudad(ciudad, codigo_pais, api_key_openweather)
+    
+    if lat and lon:
+        with st.spinner('⏳ Calculando...'):
+            radiacion_solar_diaria, velocidad_viento = obtener_datos_nasa_power(lat, lon)
+
+            # Datos del usuario
+            datos_usuario = {
+                "tamano_techo": tamano_techo,
+                "consumo_actual": consumo_actual,
+                "tipo_energia": tipo_energia,
+                "radiacion_solar_diaria": radiacion_solar_diaria['20220101'] if tipo_energia == "Solar" else None,
+                "velocidad_viento": velocidad_viento['20220101'] if tipo_energia == "Eólica" else None
+            }
+
+            # Obtener la recomendación de IA
+            recomendacion = obtener_recomendacion_ia(datos_usuario)
+            st.write("**Recomendación del Chatbot:**")
+            st.write(recomendacion)
 
 # Botón para iniciar la simulación
 if st.button("⚡ Calcular potencial de energía renovable ⚡"):
