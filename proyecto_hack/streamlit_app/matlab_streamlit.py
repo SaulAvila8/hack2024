@@ -4,6 +4,16 @@ import concurrent.futures
 import requests
 import matplotlib.pyplot as plt
 import numpy as np
+import pymongo
+
+# Configuración de MongoDB
+MONGO_URI = "mongodb+srv://saulavilafigueroa:saulavilaxd@furbo.r4io7.mongodb.net/furbo?retryWrites=true&w=majority&appName=FURBO"
+client = pymongo.MongoClient(MONGO_URI)
+# Selecciona la base de datos "furbo"
+db = client["furbo"]
+
+# Selecciona la colección "data"
+collection = db["data"]
 
 # Inyectar CSS personalizado para cambiar el fondo y otros estilos, incluyendo la imagen de fondo
 page_bg = """
@@ -124,6 +134,27 @@ def simular_energia_renovable(tipo_energia, lat, lon, tamano_techo):
     eng.quit()
     return energia_generada
 
+# Función para guardar los datos del usuario en MongoDB
+def guardar_usuario_mongo(ciudad, pais, tamano_techo, tipo_energia, consumo_actual, energia_generada, reduccion_co2):
+    # Crear un diccionario con los datos del usuario
+    datos_usuario = {
+        "ciudad": ciudad,
+        "pais": pais,
+        "tamano_techo": tamano_techo,
+        "tipo_energia": tipo_energia,
+        "consumo_actual": consumo_actual,
+        "energia_generada": energia_generada,
+        "reduccion_co2": reduccion_co2
+    }
+
+    # Insertar el documento en la colección de usuarios en MongoDB
+    try:
+        collection.insert_one(datos_usuario)
+        st.success("Datos del usuario guardados en la base de datos con éxito.")
+    except Exception as e:
+        st.error(f"Error al guardar los datos del usuario en MongoDB: {e}")
+
+
 # Función para graficar el costo-beneficio
 def graficar_costo_beneficio(energia_generada, tamano_techo):
     costo_por_m2 = 100  
@@ -198,11 +229,15 @@ def obtener_recomendacion_ia(datos_usuario):
         prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
                   f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
                   f"La radiación solar diaria es {datos_usuario['radiacion_solar_diaria']} "
+                  f"Mi ciudad es {datos_usuario['ciudad']} "
+                  f"Mi pais es {datos_usuario['pais']} "
                   f"¿Qué tipo de paneles me recomiendas?, se muy breve y ve directo al grano")
     elif datos_usuario['tipo_energia'] == "Eólica":
         prompt = (f"Tengo un techo de {datos_usuario['tamano_techo']} metros cuadrados "
                   f"y consumo {datos_usuario['consumo_actual']} kWh al mes usando energía {datos_usuario['tipo_energia']}. "
                   f"y la velocidad del viento es {datos_usuario.get('velocidad_viento', 'desconocida')}. "
+                  f"Mi ciudad es {datos_usuario['ciudad']} "
+                  f"Mi pais es {datos_usuario['pais']} "
                   f"¿Qué tipo de generadores eólicos me recomiendas?,  se muy breve y ve directo al grano")
 
     # Endpoint para Google Gemini 1.5 API
@@ -288,6 +323,8 @@ if st.button("💬 Obtener recomendación de IA"):
                 "tamano_techo": tamano_techo,
                 "consumo_actual": consumo_actual,
                 "tipo_energia": tipo_energia,
+                "ciudad": ciudad,
+                "pais": pais_seleccionado,
                 "radiacion_solar_diaria": radiacion_solar_diaria['20220101'] if tipo_energia == "Solar" else None,
                 "velocidad_viento": velocidad_viento['20220101'] if tipo_energia == "Eólica" else None
             }
@@ -296,6 +333,7 @@ if st.button("💬 Obtener recomendación de IA"):
             recomendacion = obtener_recomendacion_ia(datos_usuario)
             st.write("**Recomendación del Chatbot:**")
             st.write(recomendacion)
+
 
 # Botón para iniciar la simulación
 if st.button("⚡ Calcular potencial de energía renovable ⚡"):
@@ -315,3 +353,7 @@ if st.button("⚡ Calcular potencial de energía renovable ⚡"):
             # Calcular y mostrar la reducción de CO2
             reduccion_co2 = calcular_reduccion_co2(tipo_energia, energia_generada)
             st.write(f"🌿 **Reducción de CO2 estimada:** {reduccion_co2} kilogramos")
+            
+            # Guardar los datos del usuario en MongoDB
+            guardar_usuario_mongo(ciudad, pais_seleccionado, tamano_techo, tipo_energia, consumo_actual, energia_generada, reduccion_co2)
+
